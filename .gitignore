@@ -1,3 +1,45 @@
+# Byte-compiled / optimized
 __pycache__/
 *.py[cod]
 *.pyc
+*.pyo
+*.pyd
+.Python
+
+# Virtual environments
+venv/
+.venv/
+env/
+.env
+
+# Home Assistant (can contain credentials)
+.homeassistan*
+.storage/
+!www/
+*.db
+*.db-journal
+
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets (BLOCK these even in subdirectories)
+*secret*
+*credential*
+*.pem
+*.key
+id_rsa*
+id_ed25519*
+*.p12
+*.pfx
+
+# Local overrides
+config.yaml
+secrets.yaml
