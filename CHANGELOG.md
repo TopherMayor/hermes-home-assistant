@@ -8,7 +8,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ## [Unreleased]
 
 ### Added
-- Initial integration structure
+- `event.py`: HermesRunEventEntity and HermesGatewayEventEntity — SSE watcher that fires HA events (`hermes_assistant_run_started`, `hermes_assistant_run_completed`, `hermes_assistant_gateway_healthy`, etc.)
+- `binary_sensor.py`: HermesOnlineBinarySensor (online/offline) and HermesConnectionQualitySensor (degraded detection)
+- `button.py`: RefreshSensors, HealthCheck, ClearHistory, and optional Restart buttons
+- `const.py`: PLATFORMS expanded to 5 platforms; EVENT_RUN_COMPLETED/RESPONSE_READY/STREAMING_DELTA constants
+- `manifest.json`: all 5 supported_platforms registered; codeowners updated to @TopherMayor
+
+### Changed
+- `manifest.json`: documentation/issue_tracker URLs now point to github.com/TopherMayor/hermes-home-assistant
 
 <!-- templates
 ## [0.1.0] - YYYY-MM-DD

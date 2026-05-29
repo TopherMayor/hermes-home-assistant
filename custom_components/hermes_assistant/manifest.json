@@ -2,15 +2,18 @@
   "version": "0.1.0",
   "domain": "hermes_assistant",
   "name": "Hermes Assistant",
-  "documentation": "https://github.com/NousResearch/hermes-agent",
-  "codeowners": ["@NousResearch/hermes-agent"],
-  "issue_tracker": "https://github.com/NousResearch/hermes-agent/issues",
+  "documentation": "https://github.com/TopherMayor/hermes-home-assistant",
+  "codeowners": ["@TopherMayor"],
+  "issue_tracker": "https://github.com/TopherMayor/hermes-home-assistant/issues",
   "dependencies": [],
   "config_flow": true,
   "integration_type": "service",
   "requirements": [],
   "supported_platforms": [
     "conversation",
-    "sensor"
+    "sensor",
+    "binary_sensor",
+    "button",
+    "event"
   ]
 }
