@@ -3,7 +3,7 @@
  *
  * A chat card that connects to the Hermes gateway API server
  * and provides a full conversation interface with typing indicators,
- * message history, and voice message support.
+ * message history, streaming, markdown rendering, and code block support.
  *
  * Installation:
  * 1. Copy this file to www/hermes-chat-card.js in your HA config
@@ -11,18 +11,22 @@
  * 3. Or use the "Resources" panel to add as a JavaScript module
  *
  * Configuration options:
- *   gateway_url   - Hermes API server URL (default: http://localhost:8642)
- *   api_key       - API key for authentication (or set HERMES_API_KEY env)
- *   title         - Card title (default: "Hermes")
- *   prominent    - Show header bar (default: true)
- *   hide_header   - Hide the header entirely (default: false)
- *   user_name     - Name for user messages (default: "You")
- *   user_color    - Accent color for user messages (default: "#818cf8")
- *   assistant_name - Name for assistant messages (default: "Hermes")
+ *   gateway_url     - Hermes API server URL (default: http://localhost:8642)
+ *   api_key         - API key for authentication (or set HERMES_API_KEY env)
+ *   title           - Card title (default: "Hermes")
+ *   prominent       - Show header bar (default: true)
+ *   hide_header     - Hide the header entirely (default: false)
+ *   user_name       - Name for user messages (default: "You")
+ *   user_color      - Accent color for user messages (default: "#818cf8")
+ *   assistant_name  - Name for assistant messages (default: "Hermes")
  *   assistant_color - Accent color for assistant messages (default: "#34d399")
- *   placeholder   - Input placeholder text (default: "Ask Hermes anything…")
- *   max_history   - Max messages to show (default: 50, max: 200)
- *   disable_paste - Prevent image paste (default: false)
+ *   placeholder     - Input placeholder text (default: "Ask Hermes anything…")
+ *   max_history     - Max messages to show (default: 50, max: 200)
+ *   disable_paste   - Prevent image paste (default: false)
+ *   enable_markdown - Render markdown in assistant responses (default: true)
+ *   enable_code_blocks - Render and syntax-highlight code blocks (default: true)
+ *   enable_timestamps  - Show timestamp per message (default: false)
+ *   show_token_count   - Show streaming token/char count (default: false)
  */
 
 class HermesChatCard extends HTMLElement {
@@ -76,6 +80,10 @@ class HermesChatCard extends HTMLElement {
       placeholder: { type: "string", default: "Ask Hermes anything…" },
       max_history: { type: "number", default: 50 },
       disable_paste: { type: "boolean", default: false },
+      enable_markdown: { type: "boolean", default: true },
+      enable_code_blocks: { type: "boolean", default: true },
+      enable_timestamps: { type: "boolean", default: false },
+      show_token_count: { type: "boolean", default: false },
     };
   }
 
@@ -226,6 +234,110 @@ class HermesChatCard extends HTMLElement {
           background: rgba(255,255,255,0.08);
           color: rgba(255,255,255,0.9);
           border-bottom-left-radius: 4px;
+          position: relative;
+        }
+
+        /* Message timestamp */
+        .message-time {
+          font-size: 10px;
+          color: rgba(255,255,255,0.25);
+          margin-top: 4px;
+          padding: 0 4px;
+        }
+
+        /* Copy button */
+        .message-actions {
+          display: flex;
+          gap: 6px;
+          margin-top: 4px;
+          padding: 0 4px;
+          opacity: 0;
+          transition: opacity 0.15s;
+        }
+        .message:hover .message-actions { opacity: 1; }
+        .msg-action-btn {
+          background: none;
+          border: none;
+          cursor: pointer;
+          font-size: 11px;
+          padding: 2px 6px;
+          border-radius: 4px;
+          color: rgba(255,255,255,0.4);
+          background: rgba(255,255,255,0.06);
+          transition: all 0.15s;
+        }
+        .msg-action-btn:hover { color: #fff; background: rgba(255,255,255,0.12); }
+        .msg-action-btn.copied { color: #34d399; }
+
+        /* Code blocks */
+        .msg-code-block {
+          background: rgba(0,0,0,0.4);
+          border: 1px solid rgba(255,255,255,0.08);
+          border-radius: 8px;
+          margin: 8px 0;
+          overflow: hidden;
+        }
+        .code-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          padding: 6px 12px;
+          background: rgba(0,0,0,0.3);
+          border-bottom: 1px solid rgba(255,255,255,0.06);
+          font-size: 11px;
+          color: rgba(255,255,255,0.4);
+        }
+        .code-header .code-lang { font-weight: 600; text-transform: uppercase; }
+        .code-copy-btn { cursor: pointer; color: rgba(255,255,255,0.4); background: none; border: none; font-size: 11px; padding: 2px 6px; border-radius: 4px; }
+        .code-copy-btn:hover { color: #fff; background: rgba(255,255,255,0.1); }
+        .code-copy-btn.copied { color: #34d399; }
+        .msg-code-block pre {
+          margin: 0;
+          padding: 12px;
+          overflow-x: auto;
+          font-size: 13px;
+          font-family: "JetBrains Mono", "Fira Code", "Consolas", monospace;
+          line-height: 1.5;
+        }
+        .msg-code-block pre::-webkit-scrollbar { height: 4px; }
+        .msg-code-block pre::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.1); border-radius: 2px; }
+
+        /* Inline code */
+        .msg-bubble code:not(.msg-code-block code) {
+          background: rgba(0,0,0,0.3);
+          padding: 1px 5px;
+          border-radius: 4px;
+          font-size: 0.9em;
+          font-family: "JetBrains Mono", "Consolas", monospace;
+        }
+
+        /* Markdown elements in assistant bubbles */
+        .msg-bubble h1, .msg-bubble h2, .msg-bubble h3 { margin: 8px 0 4px; color: #fff; }
+        .msg-bubble h1 { font-size: 16px; }
+        .msg-bubble h2 { font-size: 15px; }
+        .msg-bubble h3 { font-size: 14px; }
+        .msg-bubble p { margin: 4px 0; }
+        .msg-bubble ul, .msg-bubble ol { margin: 4px 0; padding-left: 20px; }
+        .msg-bubble li { margin: 2px 0; }
+        .msg-bubble strong { color: #fff; font-weight: 600; }
+        .msg-bubble em { color: rgba(255,255,255,0.8); }
+        .msg-bubble blockquote {
+          border-left: 3px solid rgba(255,255,255,0.2);
+          margin: 6px 0;
+          padding: 4px 10px;
+          color: rgba(255,255,255,0.7);
+          background: rgba(255,255,255,0.04);
+          border-radius: 0 4px 4px 0;
+        }
+        .msg-bubble a { color: #34d399; text-decoration: underline; }
+        .msg-bubble hr { border: none; border-top: 1px solid rgba(255,255,255,0.1); margin: 8px 0; }
+
+        /* Token counter */
+        .token-counter {
+          font-size: 10px;
+          color: rgba(255,255,255,0.25);
+          padding: 2px 8px;
+          text-align: right;
         }
 
         /* Typing indicator */
@@ -394,13 +506,27 @@ class HermesChatCard extends HTMLElement {
     emptyState.style.display = "none";
 
     // Build message HTML
-    const messagesHtml = this._messages.map((msg) => {
+    const messagesHtml = this._messages.map((msg, idx) => {
       const role = msg.role === "user" ? (this._config.user_name || "You") : (this._config.assistant_name || "Hermes");
       const roleColor = msg.role === "user" ? (this._config.user_color || "#818cf8") : (this._config.assistant_color || "#34d399");
+      const content = this._config.enable_markdown && msg.role === "assistant"
+        ? this._renderMarkdown(msg.content)
+        : this._escapeHtml(msg.content);
+      const timeHtml = this._config.enable_timestamps && msg.timestamp
+        ? `<div class="message-time">${this._formatTime(msg.timestamp)}</div>` : "";
+      const actionsHtml = msg.role === "assistant"
+        ? `<div class="message-actions">
+            <button class="msg-action-btn copy-btn" data-msg-idx="${idx}">Copy</button>
+           </div>` : "";
+      const tokenHtml = this._config.show_token_count && msg.token_count
+        ? `<div class="token-counter">${msg.token_count} chars</div>` : "";
       return `
         <div class="message ${msg.role}">
           <div class="message-role" style="color: ${roleColor}">${role}</div>
-          <div class="message-bubble">${this._escapeHtml(msg.content)}</div>
+          <div class="message-bubble">${content}</div>
+          ${timeHtml}
+          ${actionsHtml}
+          ${tokenHtml}
         </div>
       `;
     }).join("");
@@ -411,10 +537,13 @@ class HermesChatCard extends HTMLElement {
 
     // Scroll to bottom
     container.scrollTop = container.scrollHeight;
+
+    // Attach copy handlers after DOM is ready
+    this._setupCopyHandlers();
   }
 
   _appendMessage(role, content) {
-    this._messages.push({ role, content });
+    this._messages.push({ role, content, timestamp: Date.now() });
     if (this._messages.length > this._historyMax) {
       this._messages = this._messages.slice(-this._historyMax);
     }
@@ -494,17 +623,25 @@ class HermesChatCard extends HTMLElement {
       const assistantMsg = {
         role: "assistant",
         content: "",
+        timestamp: Date.now(),
       };
       this._messages.push(assistantMsg);
 
       const msgEl = document.createElement("div");
       msgEl.className = "message assistant";
+      const roleColor = this._config.assistant_color || "#34d399";
+      const roleName = this._config.assistant_name || "Hermes";
+      const bubbleId = `bubble-${this._uuidv4().slice(0, 8)}`;
       msgEl.innerHTML = `
-        <div class="message-role" style="color: ${this._config.assistant_color || "#34d399"}">${this._config.assistant_name || "Hermes"}</div>
-        <div class="message-bubble"></div>
+        <div class="message-role" style="color: ${roleColor}">${roleName}</div>
+        <div class="message-bubble" id="${bubbleId}"></div>
+        <div class="message-actions"><button class="msg-action-btn copy-btn" data-msg-idx="${this._messages.length - 1}">Copy</button></div>
+        ${this._config.show_token_count ? '<div class="token-counter" id="token-counter">0 chars</div>' : ''}
       `;
       container.appendChild(msgEl);
-      const bubbleEl = msgEl.querySelector(".message-bubble");
+      const bubbleEl = msgEl.querySelector(`#${bubbleId}`);
+      const tokenCounterEl = this._config.show_token_count ? msgEl.querySelector("#token-counter") : null;
+      const msgIdx = this._messages.length - 1;
 
       // Read SSE stream
       const reader = response.body.getReader();
@@ -528,8 +665,14 @@ class HermesChatCard extends HTMLElement {
             if (delta) {
               this._streamBuffer += delta;
               assistantMsg.content += delta;
-              bubbleEl.textContent = this._streamBuffer;
+              // Use markdown renderer for assistant bubbles
+              bubbleEl.innerHTML = this._config.enable_markdown !== false
+                ? this._renderMarkdown(this._streamBuffer)
+                : this._escapeHtml(this._streamBuffer);
               container.scrollTop = container.scrollHeight;
+              if (tokenCounterEl) {
+                tokenCounterEl.textContent = `${this._streamBuffer.length} chars`;
+              }
             }
           } catch {}
         }
@@ -577,6 +720,111 @@ class HermesChatCard extends HTMLElement {
       .replace(/>/g, "&gt;")
       .replace(/"/g, "&quot;")
       .replace(/'/g, "&#39;");
+  }
+
+  /** Minimal markdown-to-HTML renderer (no external deps needed). */
+  _renderMarkdown(text) {
+    if (!text) return "";
+    const escaped = this._escapeHtml(text);
+
+    // Fenced code blocks: ```lang\ncode\n```
+    const codeBlockRe = /```(\w*)\n?([\s\S]*?)```/g;
+    let result = escaped.replace(codeBlockRe, (_m, lang, code) => {
+      const langLabel = lang || "code";
+      const copyId = `cb-${this._uuidv4().slice(0, 8)}`;
+      const escapedCode = code.trim();
+      return `<div class="msg-code-block">
+  <div class="code-header">
+    <span class="code-lang">${langLabel}</span>
+    <button class="code-copy-btn" data-code-id="${copyId}">Copy</button>
+  </div>
+  <pre id="${copyId}">${escapedCode}</pre>
+</div>`;
+    });
+
+    // Inline code: `code`
+    result = result.replace(/`([^`]+)`/g, '<code>$1</code>');
+
+    // Headers
+    result = result.replace(/^### (.+)$/gm, '<h3>$1</h3>');
+    result = result.replace(/^## (.+)$/gm, '<h2>$1</h2>');
+    result = result.replace(/^# (.+)$/gm, '<h1>$1</h1>');
+
+    // Bold and italic
+    result = result.replace(/\*\*\*(.+?)\*\*\*/g, '<strong><em>$1</em></strong>');
+    result = result.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    result = result.replace(/\*(.+?)\*/g, '<em>$1</em>');
+    result = result.replace(/_(.+?)_/g, '<em>$1</em>');
+
+    // Blockquotes
+    result = result.replace(/^&gt; (.+)$/gm, '<blockquote>$1</blockquote>');
+
+    // Horizontal rules
+    result = result.replace(/^---$/gm, '<hr>');
+
+    // Unordered lists: lines starting with - or *
+    result = result.replace(/^[\-\*] (.+)$/gm, '<li>$1</li>');
+    result = result.replace(/(<li>.*<\/li>(\n<li>.*<\/li>)*)/gs, '<ul>$1</ul>');
+
+    // Ordered lists
+    result = result.replace(/^\d+\. (.+)$/gm, '<li>$1</li>');
+
+    // Links
+    result = result.replace(/\[([^\]]+)\]\((https?:\/\/[^\)]+)\)/g, '<a href="$2" target="_blank" rel="noopener">$1</a>');
+
+    // Paragraphs: double newlines
+    result = result.replace(/\n\n+/g, '</p><p>');
+    result = `<p>${result}</p>`;
+    result = result.replace(/<p><\/p>/g, '');
+    result = result.replace(/<p>(<h[1-3]>)/g, '$1');
+    result = result.replace(/(<\/h[1-3]>)<\/p>/g, '$1');
+    result = result.replace(/<p>(<ul>)/g, '$1');
+    result = result.replace(/(<\/ul>)<\/p>/g, '$1');
+    result = result.replace(/<p>(<blockquote>)/g, '$1');
+    result = result.replace(/(<\/blockquote>)<\/p>/g, '$1');
+    result = result.replace(/<p>(<div class="msg-code-block")/g, '$1');
+    result = result.replace(/(<div class="msg-code-block">[\s\S]*?<\/div>)<\/p>/g, '$1');
+    result = result.replace(/<p>(<hr>)<\/p>/g, '$1');
+
+    return result;
+  }
+
+  _formatTime(unixMs) {
+    const d = new Date(unixMs);
+    return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  }
+
+  async _copyMessage(btn, text) {
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = "Copied!";
+      btn.classList.add("copied");
+      setTimeout(() => {
+        btn.textContent = "Copy";
+        btn.classList.remove("copied");
+      }, 2000);
+    } catch {
+      btn.textContent = "Failed";
+      setTimeout(() => { btn.textContent = "Copy"; }, 2000);
+    }
+  }
+
+  _setupCopyHandlers() {
+    // Attach copy handlers to all copy buttons in messages
+    this.shadowRoot.querySelectorAll(".copy-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const idx = parseInt(btn.dataset.msgIdx, 10);
+        const msg = this._messages[idx];
+        if (msg) this._copyMessage(btn, msg.content);
+      });
+    });
+    // Code block copy buttons
+    this.shadowRoot.querySelectorAll(".code-copy-btn").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const codeEl = this.shadowRoot.querySelector(`#${btn.dataset.codeId}`);
+        if (codeEl) this._copyMessage(btn, codeEl.textContent);
+      });
+    });
   }
 
   _saveHistory() {

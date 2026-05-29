@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - `manifest.json`: all 5 supported_platforms registered; codeowners updated to @TopherMayor
 
 ### Changed
+- `sensor.py`: expanded from 6 to 9 sensors (added context_limit, error_count, version, provider); added SensorStateClass (MEASUREMENT for context/threads/memory, TOTAL_INCREASING for uptime/errors); added extra_state_attributes for context thresholds, max_threads, swap_mb; updated manufacturer to "Hermes Agent"
 - `manifest.json`: documentation/issue_tracker URLs now point to github.com/TopherMayor/hermes-home-assistant
 
 <!-- templates

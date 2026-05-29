@@ -17,14 +17,17 @@ from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-# Sensor configuration: (key, name, device_class, unit, icon, entity_category)
+# Sensor configuration: (key, name, device_class, unit, icon, entity_category, state_class)
 SENSORS = [
-    ("model", "Hermes Model", SensorDeviceClass.ENUM, None, "mdi:robot", EntityCategory.DIAGNOSTIC),
-    ("context_pct", "Context Usage", SensorDeviceClass.PERCENTAGE, "%", "mdi:memory", EntityCategory.DIAGNOSTIC),
-    ("uptime_seconds", "Gateway Uptime", SensorDeviceClass.DURATION, "s", "mdi:clock-outline", EntityCategory.DIAGNOSTIC),
-    ("active_threads", "Active Threads", None, "threads", "mdi:account-multiple", EntityCategory.DIAGNOSTIC),
-    ("rss_mb", "Memory Usage", SensorDeviceClass.DATA_SIZE, "MB", "mdi:memory", EntityCategory.DIAGNOSTIC),
-    ("online", "Gateway Online", SensorDeviceClass.ENUM, None, "mdi:lan-connect", EntityCategory.DIAGNOSTIC),
+    ("model", "Hermes Model", SensorDeviceClass.ENUM, None, "mdi:robot", EntityCategory.DIAGNOSTIC, None),
+    ("context_pct", "Context Usage", SensorDeviceClass.PERCENTAGE, "%", "mdi:memory", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("context_limit", "Context Limit", SensorDeviceClass.DATA_SIZE, "tokens", "mdi:database", EntityCategory.DIAGNOSTIC, None),
+    ("uptime_seconds", "Gateway Uptime", SensorDeviceClass.DURATION, "s", "mdi:clock-outline", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
+    ("active_threads", "Active Threads", None, "threads", "mdi:account-multiple", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("rss_mb", "Memory Usage", SensorDeviceClass.DATA_SIZE, "MB", "mdi:memory", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("error_count", "Error Count", SensorDeviceClass.ENUM, None, "mdi:alert-circle", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
+    ("version", "Hermes Version", SensorDeviceClass.ENUM, None, "mdi:information", EntityCategory.DIAGNOSTIC, None),
+    ("provider", "LLM Provider", SensorDeviceClass.ENUM, None, "mdi:cloud", EntityCategory.DIAGNOSTIC, None),
 ]
 
 
@@ -36,7 +39,8 @@ async def async_setup_entry(
     coordinator = entry_data.get("coordinator")
 
     entities = []
-    for (key, name, device_class, unit, icon, category) in SENSORS:
+    for row in SENSORS:
+        key, name, device_class, unit, icon, category, state_class = row
         entity = HermesSensorEntity(
             coordinator=coordinator,
             entry_id=entry.entry_id,
@@ -46,6 +50,7 @@ async def async_setup_entry(
             unit=unit,
             icon=icon,
             entity_category=category,
+            state_class=state_class,
         )
         entities.append(entity)
 
@@ -67,6 +72,7 @@ class HermesSensorEntity(SensorEntity):
         unit: Optional[str],
         icon: str,
         entity_category: EntityCategory,
+        state_class: Optional[SensorStateClass] = None,
     ):
         self.coordinator = coordinator
         self.entry_id = entry_id
@@ -76,6 +82,7 @@ class HermesSensorEntity(SensorEntity):
         self._attr_icon = icon
         self._attr_entity_category = entity_category
         self._attr_device_class = device_class
+        self._attr_state_class = state_class
 
         # Entity ID
         self._attr_unique_id = f"{DOMAIN}_{entry_id}_{key}"
@@ -86,9 +93,9 @@ class HermesSensorEntity(SensorEntity):
         self._attr_device_info = {
             "identifiers": {(DOMAIN, entry_id)},
             "name": f"Hermes Gateway ({gateway_url})",
-            "manufacturer": "Nous Research",
-            "model": "Hermes Agent",
-            "sw_version": "0.14.0+",
+            "manufacturer": "Hermes Agent",
+            "model": "API Gateway",
+            "sw_version": entry_data.get("version", "0.14+"),
         }
 
     @property
@@ -112,7 +119,7 @@ class HermesSensorEntity(SensorEntity):
         if value is None:
             return None
 
-        # Convert uptime integer to HumanReadable
+        # Convert uptime integer to duration seconds
         if self._key == "uptime_seconds":
             return int(value)
 
@@ -125,7 +132,32 @@ class HermesSensorEntity(SensorEntity):
             return ["hermes-agent"]
         if self._key == "online":
             return ["online", "offline", "auth_failed"]
+        if self._key == "error_count":
+            return ["none", "low", "medium", "high"]
+        if self._key == "version":
+            return ["0.14.0+", "unknown"]
+        if self._key == "provider":
+            providers = []
+            data = self.coordinator.data or {}
+            provider = data.get("provider")
+            if provider:
+                providers.append(provider)
+            return providers or None
         return None
+
+    @property
+    def extra_state_attributes(self) -> dict:
+        """Return extra state attributes for richer diagnostics."""
+        attrs = {}
+        data = self.coordinator.data or {}
+        if self._key == "context_pct":
+            attrs["warning_threshold"] = 80
+            attrs["critical_threshold"] = 95
+        if self._key == "active_threads":
+            attrs["max_threads"] = data.get("max_threads", 10)
+        if self._key == "rss_mb":
+            attrs["swap_mb"] = data.get("swap_mb", 0)
+        return attrs
 
     async def async_update(self):
         """Trigger a coordinator refresh."""

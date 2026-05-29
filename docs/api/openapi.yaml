@@ -1,0 +1,459 @@
+openapi: 3.1.0
+info:
+  title: Hermes Agent API
+  version: "1.0.0"
+  description: |
+    REST + SSE API exposed by the Hermes Agent gateway.
+    Authentication: all endpoints except `/health` require `Authorization: Bearer <key>`.
+    All responses are JSON unless noted. Errors follow RFC 7807 Problem Details format.
+  contact:
+    name: Hermes Agent Support
+    url: https://github.com/TopherMayor/hermes-home-assistant
+  license:
+    name: MIT
+
+servers:
+  - url: http://localhost:8642
+    description: Default local gateway
+  - url: http://192.168.30.196:8642
+    description: Panda Home Assistant host
+
+security:
+  - BearerAuth: []
+
+tags:
+  - name: Health
+    description: Gateway health and status
+  - name: Runs
+    description: Conversation run management
+  - name: Conversations
+    description: Conversation history and message management
+  - name: Capabilities
+    description: Gateway capabilities and model info
+  - name: Events
+    description: Server-Sent Events streams
+
+paths:
+  /health:
+    get:
+      tags: [Health]
+      summary: Basic health check
+      description: "Returns status ok if the gateway is running. No auth required."
+      security: []
+      responses:
+        "200":
+          description: Gateway is healthy
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: ok
+                  timestamp:
+                    type: integer
+                    description: Unix timestamp
+
+  /health/detailed:
+    get:
+      tags: [Health]
+      summary: Detailed health with resource and model info
+      responses:
+        "200":
+          description: Detailed health payload
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthDetailed"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/runs:
+    post:
+      tags: [Runs]
+      summary: Create a new conversation run
+      description: "Creates a background run and returns a run_id immediately. Poll or subscribe to SSE for results."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RunCreate"
+      responses:
+        "202":
+          description: Run accepted with run_id for polling
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RunCreated"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+
+  /v1/runs/{run_id}:
+    get:
+      tags: [Runs]
+      summary: Get run status and result
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run object with status and response
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Run"
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/runs/{run_id}/cancel:
+    post:
+      tags: [Runs]
+      summary: Cancel an in-progress run
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: Run cancelled
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/runs/{run_id}/events:
+    get:
+      tags: [Events]
+      summary: SSE stream of run lifecycle events
+      description: "Long-lived SSE stream for a specific run. Events are newline-delimited JSON data objects."
+      parameters:
+        - name: run_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "200":
+          description: SSE stream
+          content:
+            text/event-stream:
+              schema:
+                type: string
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/responses:
+    post:
+      tags: [Runs]
+      summary: Synchronous chat completion (blocking)
+      description: "Sends a conversation message and waits for the full response. For long responses prefer POST /v1/runs."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: Full chat completion
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "401":
+          $ref: "#/components/responses/Unauthorized"
+        "408":
+          description: Request timeout
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Error"
+
+  /v1/responses/stream:
+    post:
+      tags: [Runs]
+      summary: Streaming chat completion (SSE)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/ChatRequest"
+      responses:
+        "200":
+          description: SSE stream of response chunks
+          content:
+            text/event-stream:
+              schema:
+                type: string
+
+  /v1/conversations/{conversation_id}/messages:
+    get:
+      tags: [Conversations]
+      summary: List messages in a conversation
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 50
+            maximum: 200
+        - name: before
+          in: query
+          schema:
+            type: string
+          description: Cursor for pagination
+      responses:
+        "200":
+          description: Paginated message list
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  messages:
+                    type: array
+                    items:
+                      $ref: "#/components/schemas/Message"
+                  has_more:
+                    type: boolean
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/conversations/{conversation_id}:
+    delete:
+      tags: [Conversations]
+      summary: Delete a conversation and its history
+      parameters:
+        - name: conversation_id
+          in: path
+          required: true
+          schema:
+            type: string
+      responses:
+        "204":
+          description: Conversation deleted
+        "404":
+          $ref: "#/components/responses/NotFound"
+
+  /v1/capabilities:
+    get:
+      tags: [Capabilities]
+      summary: Gateway capabilities and model configuration
+      responses:
+        "200":
+          description: Capabilities object
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Capabilities"
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: API key
+
+  schemas:
+    HealthDetailed:
+      type: object
+      properties:
+        status:
+          type: string
+          enum: [ok, degraded, offline]
+        model:
+          type: string
+          description: Active model name
+        provider:
+          type: string
+          description: LLM provider
+        context_pct:
+          type: number
+          format: float
+          description: Context window utilization percentage
+        context_limit:
+          type: integer
+          description: Total context window size in tokens
+        uptime_seconds:
+          type: integer
+          description: Seconds since gateway started
+        active_threads:
+          type: integer
+          description: Currently active conversation threads
+        rss_mb:
+          type: number
+          description: Gateway process RSS memory in MB
+        version:
+          type: string
+          description: Gateway software version
+        error_count:
+          type: integer
+          description: Count of errors since gateway start
+
+    RunCreate:
+      type: object
+      required: [messages]
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+          description: Conversation messages
+        model:
+          type: string
+          description: Model override
+        metadata:
+          type: object
+          description: Arbitrary key-value metadata
+
+    ChatRequest:
+      type: object
+      required: [messages]
+      properties:
+        model:
+          type: string
+          description: Model to use
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/Message"
+        stream:
+          type: boolean
+          default: false
+          description: Enable SSE streaming
+
+    ChatResponse:
+      type: object
+      properties:
+        id:
+          type: string
+          description: Unique response ID
+        model:
+          type: string
+        choices:
+          type: array
+          items:
+            type: object
+            properties:
+              index:
+                type: integer
+              message:
+                $ref: "#/components/schemas/Message"
+              finish_reason:
+                type: string
+
+    RunCreated:
+      type: object
+      properties:
+        run_id:
+          type: string
+          description: ID for polling or subscribing
+        status:
+          type: string
+          enum: [queued, running]
+
+    Run:
+      type: object
+      properties:
+        id:
+          type: string
+        status:
+          type: string
+          enum: [queued, running, completed, failed, cancelled]
+        created_at:
+          type: integer
+          description: Unix timestamp
+        completed_at:
+          type: integer
+          description: Unix timestamp when finished
+        response:
+          anyOf:
+            - $ref: "#/components/schemas/Message"
+            - type: object
+              properties:
+                content:
+                  type: string
+        error:
+          type: string
+          description: Present when status is failed
+
+    Message:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [system, user, assistant]
+        content:
+          type: string
+        name:
+          type: string
+          description: Optional sender name
+
+    Capabilities:
+      type: object
+      properties:
+        streaming:
+          type: boolean
+          description: Whether streaming is supported
+        models:
+          type: array
+          items:
+            type: string
+          description: Available model names
+        max_context_tokens:
+          type: integer
+          description: Maximum context window size
+        provider:
+          type: string
+          description: LLM provider name
+
+    Error:
+      type: object
+      properties:
+        type:
+          type: string
+          description: RFC 7807 error type URI
+        title:
+          type: string
+          description: Human-readable summary
+        detail:
+          type: string
+          description: Detailed description
+        status:
+          type: integer
+          description: HTTP status code
+
+  responses:
+    BadRequest:
+      description: Invalid request parameters
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    Unauthorized:
+      description: Missing or invalid API key
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
+    NotFound:
+      description: Resource not found
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/Error"
