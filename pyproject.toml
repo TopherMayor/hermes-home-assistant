@@ -1,0 +1,64 @@
+[project]
+name = "hermes-home-assistant"
+version = "0.1.0"
+description = "Home Assistant integration for Hermes Agent"
+requires-python = ">=3.11"
+dependencies = [
+    "aiohttp>=3.9.0",
+    "voluptuous>=0.14.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.5.0",
+    "flake8>=7.0.0",
+    "mypy>=1.10.0",
+    "pytest>=8.0.0",
+    "pytest-asyncio>=0.23.0",
+    "pytest-cov>=4.1.0",
+    "aioresponses>=0.7.6",
+    "types-aiohttp>=3.11.0",
+    "types-python-dateutil>=2.8.0",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # Pyflakes
+    "I",   # isort
+    "UP",  # pyupgrade
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "SIM", # flake8-simplify
+    "RUF", # Ruff-specific rules
+]
+ignore = [
+    "E203",  # whitespace before ':' — conflicts with black
+    "W503",  # line break before binary operator — conflicts with black
+    "B008",  # do not perform function calls in argument defaults
+    "SIM102",  # nested if statements — readability over brevity
+]
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]
+"tests/*" = ["B011", "SIM102"]
+
+[tool.mypy]
+python_version = "3.11"
+ignore-missing-imports = true
+disable-error-code = ["attr-defined", "valid-type"]
+show-error-codes = true
+pretty = true
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+addopts = "-v --cov=custom_components/hermes_assistant --cov-report=term-missing"
+filterwarnings = [
+    "ignore::DeprecationWarning",
+]

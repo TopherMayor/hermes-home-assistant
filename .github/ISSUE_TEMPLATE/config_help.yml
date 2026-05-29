@@ -1,0 +1,63 @@
+name: Configuration Help
+
+description: Get help setting up or troubleshooting the Hermes integration.
+
+labels: ["config-help"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Configuration Help
+        Need help getting things working? Describe your setup and what's not working.
+
+  - type: input
+    id: ha_version
+    attributes:
+      label: Home Assistant Version
+      placeholder: "2025.6.0"
+    validations:
+      required: true
+
+  - type: input
+    id: hermes_gateway_url
+    attributes:
+      label: Hermes Gateway URL
+      placeholder: "http://192.168.1.100:8642"
+    validations:
+      required: true
+
+  - type: textarea
+    id: setup_steps
+    attributes:
+      label: What have you tried?
+      description: List the steps you've already taken to set up the integration.
+      placeholder: |
+        1. Installed the integration via [HACS / manual]
+        2. Added the integration via Settings → Devices & Services
+        3. Entered the gateway URL and API key
+        4. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: issue
+    attributes:
+      label: What's not working?
+      description: Describe the specific problem or error you're seeing.
+      placeholder: |
+        The integration shows as "configured" but:
+        - Sensors show "unavailable"
+        - The conversation agent doesn't appear in Voice Assistants
+        - The chat card shows "Connection refused"
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant Log Output
+      placeholder: "Paste the relevant homeassistant.log lines or HA error messages"
+    validations:
+      required: false

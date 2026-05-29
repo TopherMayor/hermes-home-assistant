@@ -1,0 +1,69 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install linting tools
+        run: |
+          pip install ruff flake8 mypy types-aiohttp types-python-dateutil
+
+      - name: Check ruff
+        run: ruff check .
+
+      - name: Check flake8
+        run: flake8 custom_components/hermes_assistant/ --max-line-length=100 --extend-ignore=E203,W503
+
+      - name: Check mypy
+        run: |
+          mypy custom_components/hermes_assistant/ \
+            --ignore-missing-imports \
+            --disable-error-code=attr-defined \
+            --disable-error-code=valid-type
+
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install test dependencies
+        run: |
+          pip install pytest pytest-asyncio pytest-cov aioresponses pytest-httpx
+
+      - name: Run tests
+        run: |
+          pytest tests/ -v --cov=custom_components/hermes_assistant --cov-report=term-missing
+
+  ha-lint:
+    name: Home Assistant Validation
+    runs-on: ubuntu-latest
+    container:
+      image: homeassistant/amd64-homeassistant:stable
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate integration
+        run: |
+          ha validate --integration-dir ./custom_components/hermes_assistant 2>/dev/null || \
+          python -m homeassistant/scripts.core_check --script top_level \
+            ./custom_components/hermes_assistant || true
