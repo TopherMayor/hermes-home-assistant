@@ -1,0 +1,16 @@
+{
+  "version": "0.1.0",
+  "domain": "hermes_assistant",
+  "name": "Hermes Assistant",
+  "documentation": "https://github.com/NousResearch/hermes-agent",
+  "codeowners": ["@NousResearch/hermes-agent"],
+  "issue_tracker": "https://github.com/NousResearch/hermes-agent/issues",
+  "dependencies": [],
+  "config_flow": true,
+  "integration_type": "service",
+  "requirements": [],
+  "supported_platforms": [
+    "conversation",
+    "sensor"
+  ]
+}
