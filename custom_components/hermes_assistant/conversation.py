@@ -10,8 +10,8 @@ import json
 import logging
 from typing import Optional
 
-from homeassistant.components.conversation import ATTR_TEXT, ATTR_AGENT_ID
-from homeassistant.components.conversation.agent import AbstractConversationAgent
+from homeassistant.components.conversation import ATTR_TEXT, ATTR_AGENT_ID, AbstractConversationAgent
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import intent
 
@@ -227,3 +227,18 @@ class HermesConversationAgent(AbstractConversationAgent):
             ),
             conversation_id=conversation_id,
         ).with_error(message)
+
+
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up the Hermes conversation platform from a config entry.
+
+    This is called by HA when the 'conversation' platform is set up via
+    async_forward_entry_setups in __init__.py. We create the agent and
+    register it so Assist can route to it.
+    """
+    agent = HermesConversationAgent(hass, entry.entry_id)
+    # Store on hass.data so the agent can be retrieved by entity_id
+    hass.data.setdefault(DOMAIN, {})
+    hass.data[DOMAIN][entry.entry_id] = hass.data[DOMAIN].get(entry.entry_id, {})
+    hass.data[DOMAIN][entry.entry_id]["conversation_agent"] = agent
+    return True
