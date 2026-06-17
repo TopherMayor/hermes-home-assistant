@@ -153,6 +153,43 @@ class HermesApiClient:
         except (HermesConnectionError, HermesAuthError, HermesApiError):
             return {}
 
+    async def async_get_sessions(self) -> List[Dict[str, Any]]:
+        """Get list of all session records.
+
+        Returns an empty list on connection/auth errors.
+        Each session includes: id, source, model, started_at, ended_at,
+        end_reason, message_count, tool_call_count, input_tokens,
+        output_tokens, cache_read_tokens, cache_write_tokens,
+        reasoning_tokens, estimated_cost_usd, api_call_count, etc.
+        """
+        try:
+            result = await self._request("GET", "/api/sessions")
+            if isinstance(result, dict):
+                return result.get("data", []) or []
+            return result or []
+        except (HermesConnectionError, HermesAuthError, HermesApiError):
+            return []
+
+    async def async_get_toolsets(self) -> List[Dict[str, Any]]:
+        """Get list of configured toolsets with enabled/configured state."""
+        try:
+            result = await self._request("GET", "/v1/toolsets")
+            if isinstance(result, dict):
+                return result.get("data", []) or []
+            return result or []
+        except (HermesConnectionError, HermesAuthError, HermesApiError):
+            return []
+
+    async def async_get_skills(self) -> List[Dict[str, Any]]:
+        """Get list of loaded skills."""
+        try:
+            result = await self._request("GET", "/v1/skills")
+            if isinstance(result, dict):
+                return result.get("data", []) or []
+            return result or []
+        except (HermesConnectionError, HermesAuthError, HermesApiError):
+            return []
+
     async def async_get_status(self) -> Dict[str, Any]:
         """Get current gateway status (used by sensor entity)."""
         try:

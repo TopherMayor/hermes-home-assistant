@@ -88,6 +88,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             _LOGGER.debug("Capabilities fetch error: %s", e)
             caps = {}
 
+        try:
+            sessions = await client.async_get_sessions()
+            toolsets = await client.async_get_toolsets()
+            skills = await client.async_get_skills()
+        except Exception as e:
+            _LOGGER.debug("Sessions/toolsets/skills fetch error: %s", e)
+            sessions = []
+            toolsets = []
+            skills = []
+
         # Compute uptime from updated_at - the gateway's "started" time
         # is implicit; we approximate by tracking the first-seen updated_at
         # and computing elapsed seconds. Stored on the client.
@@ -136,6 +146,78 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
         if uptime is not None:
             merged["uptime_seconds"] = uptime
+
+        # Compute session-derived metrics from /api/sessions
+        if isinstance(sessions, list) and sessions:
+            import time as _time
+            now_ts = _time.time()
+            today_start = now_ts - (now_ts % 86400)  # midnight UTC today
+
+            active_sessions = 0
+            tokens_today = 0
+            cost_today = 0.0
+            tokens_last = 0
+
+            # Sort sessions by started_at descending
+            sorted_sessions = sorted(
+                sessions,
+                key=lambda s: s.get("started_at") or 0,
+                reverse=True
+            )
+
+            for sess in sessions:
+                started_at = sess.get("started_at") or 0
+                ended_at = sess.get("ended_at")
+
+                # Active = no ended_at OR ended_at > now - 1 minute
+                if ended_at is None:
+                    active_sessions += 1
+
+                # Tokens today = sum of all token types for sessions started today
+                if started_at >= today_start:
+                    tokens_today += (
+                        (sess.get("input_tokens") or 0)
+                        + (sess.get("output_tokens") or 0)
+                        + (sess.get("cache_read_tokens") or 0)
+                        + (sess.get("cache_write_tokens") or 0)
+                        + (sess.get("reasoning_tokens") or 0)
+                    )
+                    cost_today += sess.get("estimated_cost_usd") or 0
+
+            # Most recent session's total tokens
+            if sorted_sessions:
+                latest = sorted_sessions[0]
+                tokens_last = (
+                    (latest.get("input_tokens") or 0)
+                    + (latest.get("output_tokens") or 0)
+                    + (latest.get("cache_read_tokens") or 0)
+                    + (latest.get("cache_write_tokens") or 0)
+                    + (latest.get("reasoning_tokens") or 0)
+                )
+
+            merged["rss_mb"] = active_sessions
+            merged["context_limit"] = tokens_today
+            merged["context_pct"] = tokens_last
+            merged["estimated_cost_today"] = round(cost_today, 4)
+
+        # Toolset count
+        if isinstance(toolsets, list):
+            merged["toolsets_enabled"] = sum(
+                1 for t in toolsets if isinstance(t, dict) and t.get("enabled")
+            )
+            merged["toolsets_total"] = len(toolsets)
+
+        # Skills count
+        if isinstance(skills, list):
+            merged["skills_loaded"] = len(skills)
+
+        # Features count from capabilities
+        if isinstance(caps, dict):
+            features = caps.get("features", {})
+            if isinstance(features, dict):
+                merged["features_enabled"] = sum(
+                    1 for v in features.values() if v is True
+                )
 
         return merged
 

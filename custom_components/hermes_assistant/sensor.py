@@ -20,11 +20,11 @@ _LOGGER = logging.getLogger(__name__)
 # Sensor configuration: (key, name, device_class, unit, icon, entity_category, state_class)
 SENSORS = [
     ("model", "Hermes Model", SensorDeviceClass.ENUM, None, "mdi:robot", EntityCategory.DIAGNOSTIC, None),
-    ("context_pct", "Context Usage", SensorDeviceClass.HUMIDITY, "%", "mdi:memory", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("context_pct", "Last Session Tokens", SensorDeviceClass.DATA_SIZE, "tokens", "mdi:message-text", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
     ("context_limit", "Context Limit", SensorDeviceClass.DATA_SIZE, "tokens", "mdi:database", EntityCategory.DIAGNOSTIC, None),
     ("uptime_seconds", "Gateway Uptime", SensorDeviceClass.DURATION, "s", "mdi:clock-outline", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
     ("active_threads", "Active Threads", None, "threads", "mdi:account-multiple", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
-    ("rss_mb", "Memory Usage", SensorDeviceClass.DATA_SIZE, "MB", "mdi:memory", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("rss_mb", "Active Sessions", None, "sessions", "mdi:message-draw", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
     ("error_count", "Error Count", None, "errors", "mdi:alert-circle", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),  # count of platforms not in "connected" state
     ("version", "Hermes Version", SensorDeviceClass.ENUM, None, "mdi:information", EntityCategory.DIAGNOSTIC, None),
     ("provider", "LLM Provider", SensorDeviceClass.ENUM, None, "mdi:cloud", EntityCategory.DIAGNOSTIC, None),
@@ -155,12 +155,18 @@ class HermesSensorEntity(SensorEntity):
         attrs = {}
         data = self.coordinator.data or {}
         if self._key == "context_pct":
-            attrs["warning_threshold"] = 80
-            attrs["critical_threshold"] = 95
+            # Now: tokens used by the most recent session
+            attrs["metric"] = "tokens_last_session"
+            attrs["warning_threshold"] = 100000
+            attrs["critical_threshold"] = 500000
+        if self._key == "context_limit":
+            # Now: total tokens used today (across all sessions)
+            attrs["metric"] = "tokens_today"
         if self._key == "active_threads":
             attrs["max_threads"] = data.get("max_threads", 10)
         if self._key == "rss_mb":
-            attrs["swap_mb"] = data.get("swap_mb", 0)
+            # Now: number of active sessions (no ended_at)
+            attrs["metric"] = "active_sessions"
         return attrs
 
     async def async_update(self):

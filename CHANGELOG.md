@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.3] - 2026-06-17
+
+### Added
+- `api.py`: new methods `async_get_sessions()`, `async_get_toolsets()`, `async_get_skills()` to fetch from the gateway's `/api/sessions`, `/v1/toolsets`, and `/v1/skills` endpoints.
+- `__init__.py`: coordinator now fetches sessions, toolsets, and skills alongside health and capabilities. Computes per-session and aggregate metrics:
+  - `context_limit` ← `tokens_today` (sum of all token types across sessions started today)
+  - `context_pct` ← `tokens_last_session` (total tokens used by the most recent session)
+  - `rss_mb` ← `active_sessions` (count of sessions without `ended_at`)
+
+### Changed
+- `sensor.py`: re-purposed the previously-unknown sensors to display the new data:
+  - `context_limit` → DATA_SIZE, unit `tokens` (was DATA_SIZE/MB; now reports daily token usage)
+  - `context_pct` → DATA_SIZE, unit `tokens` (was HUMIDITY/%; now reports last-session token usage)
+  - `rss_mb` → unit `sessions`, no device class (was DATA_SIZE/MB; now reports active session count)
+- `extra_state_attributes` updated for these sensors to describe what they now report (via a `metric` key).
+
 ## [0.1.2] - 2026-06-17
 
 ### Added
