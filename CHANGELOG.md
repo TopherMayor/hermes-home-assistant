@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2026-06-17
+
+### Fixed
+- `www/hermes-chat-card.js`: the `customElements.define()` call now
+  checks `customElements.get()` first, so reloading the script (e.g. via
+  a Lovelace resource URL change) doesn't throw "an element with this
+  name is already defined".
+
 ## [0.1.7] - 2026-06-17
 
 ### Fixed

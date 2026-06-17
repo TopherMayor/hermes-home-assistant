@@ -858,4 +858,7 @@ class HermesChatCard extends HTMLElement {
   }
 }
 
-customElements.define("hermes-chat-card", HermesChatCard);
+// Defensive: skip re-registration if already defined
+if (!customElements.get("hermes-chat-card")) {
+  customElements.define("hermes-chat-card", HermesChatCard);
+}
