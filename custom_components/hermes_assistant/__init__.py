@@ -200,6 +200,42 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             merged["context_pct"] = tokens_last
             merged["estimated_cost_today"] = round(cost_today, 4)
 
+            # Yesterday's totals for trend comparison
+            yesterday_start = today_start - 86400
+            cost_yesterday = 0.0
+            tokens_yesterday = 0
+            for sess in sessions:
+                started_at = sess.get("started_at") or 0
+                if yesterday_start <= started_at < today_start:
+                    cost_yesterday += sess.get("estimated_cost_usd") or 0
+                    tokens_yesterday += (
+                        (sess.get("input_tokens") or 0)
+                        + (sess.get("output_tokens") or 0)
+                        + (sess.get("cache_read_tokens") or 0)
+                        + (sess.get("cache_write_tokens") or 0)
+                        + (sess.get("reasoning_tokens") or 0)
+                    )
+            merged["estimated_cost_yesterday"] = round(cost_yesterday, 4)
+            merged["tokens_yesterday"] = tokens_yesterday
+
+            # Trend (percent change vs yesterday). When yesterday is zero,
+            # we report None which HA renders as 'unknown'.
+            if cost_yesterday > 0:
+                cost_trend_pct = round(
+                    ((cost_today - cost_yesterday) / cost_yesterday) * 100, 2
+                )
+                merged["cost_trend_pct"] = cost_trend_pct
+            else:
+                merged["cost_trend_pct"] = None
+
+            if tokens_yesterday > 0:
+                token_trend_pct = round(
+                    ((tokens_today - tokens_yesterday) / tokens_yesterday) * 100, 2
+                )
+                merged["token_trend_pct"] = token_trend_pct
+            else:
+                merged["token_trend_pct"] = None
+
         # Toolset count
         if isinstance(toolsets, list):
             merged["toolsets_enabled"] = sum(

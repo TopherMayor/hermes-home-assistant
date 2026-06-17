@@ -5,6 +5,32 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.4] - 2026-06-17
+
+### Added
+- `__init__.py`: coordinator now computes yesterday's cost and tokens, and
+  percent-change trends:
+  - `estimated_cost_yesterday`, `tokens_yesterday` — totals for sessions
+    started in the 24h window before today (UTC)
+  - `cost_trend_pct`, `token_trend_pct` — percent change vs yesterday;
+    `None` (rendered as unknown) when yesterday is 0
+- `sensor.py`: 5 new sensors for the above metrics.
+
+### Changed
+- `binary_sensor.py`: `HermesOnlineBinarySensor` simplified to read
+  `coordinator.data` directly instead of tracking a separate timestamp.
+  Now exposes `available` based on `coordinator.last_update_success`.
+- `sensor.py`: removed `SensorDeviceClass.DATA_SIZE` from the three
+  token sensors (`context_limit`, `context_pct`, `tokens_yesterday`) —
+  HA 2026.6.3 rejects the `tokens` unit for DATA_SIZE. The sensors still
+  report token counts as plain numeric values without device class.
+
+### Known issue
+- `binary_sensor.hermes_hermes_hermes_online` and `_connection_quality`
+  may show `unknown` after `homeassistant.reload_config_entry` even
+  though the underlying coordinator has fresh data. A full HA core
+  restart reloads the binary sensors correctly.
+
 ## [0.1.3] - 2026-06-17
 
 ### Added

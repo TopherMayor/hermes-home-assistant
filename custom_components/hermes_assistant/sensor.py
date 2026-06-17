@@ -20,14 +20,19 @@ _LOGGER = logging.getLogger(__name__)
 # Sensor configuration: (key, name, device_class, unit, icon, entity_category, state_class)
 SENSORS = [
     ("model", "Hermes Model", SensorDeviceClass.ENUM, None, "mdi:robot", EntityCategory.DIAGNOSTIC, None),
-    ("context_pct", "Last Session Tokens", SensorDeviceClass.DATA_SIZE, "tokens", "mdi:message-text", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
-    ("context_limit", "Context Limit", SensorDeviceClass.DATA_SIZE, "tokens", "mdi:database", EntityCategory.DIAGNOSTIC, None),
+    ("context_pct", "Last Session Tokens", None, "tokens", "mdi:message-text", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("context_limit", "Context Limit", None, "tokens", "mdi:database", EntityCategory.DIAGNOSTIC, None),
     ("uptime_seconds", "Gateway Uptime", SensorDeviceClass.DURATION, "s", "mdi:clock-outline", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
     ("active_threads", "Active Threads", None, "threads", "mdi:account-multiple", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
     ("rss_mb", "Active Sessions", None, "sessions", "mdi:message-draw", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
     ("error_count", "Error Count", None, "errors", "mdi:alert-circle", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),  # count of platforms not in "connected" state
     ("version", "Hermes Version", SensorDeviceClass.ENUM, None, "mdi:information", EntityCategory.DIAGNOSTIC, None),
     ("provider", "LLM Provider", SensorDeviceClass.ENUM, None, "mdi:cloud", EntityCategory.DIAGNOSTIC, None),
+    ("estimated_cost_today", "Cost Today", None, "USD", "mdi:currency-usd", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
+    ("estimated_cost_yesterday", "Cost Yesterday", None, "USD", "mdi:currency-usd-circle", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
+    ("cost_trend_pct", "Cost Trend", SensorDeviceClass.HUMIDITY, "%", "mdi:trending-up", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("token_trend_pct", "Token Trend", SensorDeviceClass.HUMIDITY, "%", "mdi:chart-line", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("tokens_yesterday", "Tokens Yesterday", None, "tokens", "mdi:counter", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
 ]
 
 

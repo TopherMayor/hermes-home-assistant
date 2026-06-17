@@ -8,6 +8,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.util import dt as dt_util
 
 from .const import DOMAIN
 
@@ -17,7 +18,9 @@ _LOGGER = logging.getLogger(__name__)
 class HermesOnlineBinarySensor(CoordinatorEntity):
     """Binary sensor that tracks Hermes gateway online/offline state.
 
-    Mirrors the pattern from OpenClaw's binary_sensor for addon status.
+    Reads state directly from the coordinator's data dict, which is updated
+    by the coordinator on every poll cycle. This is simpler and more
+    reliable than tracking a separate timestamp.
     """
 
     _attr_has_entity_name = True
@@ -48,23 +51,31 @@ class HermesOnlineBinarySensor(CoordinatorEntity):
         )
 
     @property
+    def available(self) -> bool:
+        """Available iff the coordinator has at least one successful poll."""
+        return self.coordinator.last_update_success
+
+    @property
     def is_on(self) -> Optional[bool]:
         """Return True if Hermes gateway is online."""
-        if self.coordinator.data is None:
+        if not self.coordinator.last_update_success:
+            return False
+        data = self.coordinator.data
+        if not isinstance(data, dict):
             return None
-        # Error markers mean offline
-        if self.coordinator.data.get("error") in ("auth_failed", "connection_failed"):
+        if data.get("error") in ("auth_failed", "connection_failed", "gateway_offline"):
             return False
         return True
 
     @property
     def extra_state_attributes(self) -> dict:
         """Return additional state attributes."""
-        attrs = {}
-        if self.coordinator.data:
-            attrs["gateway_url"] = self._gateway_url
-            if "error" in self.coordinator.data:
-                attrs["last_error"] = self.coordinator.data["error"]
+        attrs = {
+            "gateway_url": self._gateway_url,
+            "last_update_success": getattr(self.coordinator, "last_update_success", None),
+        }
+        if self.coordinator.data and "error" in self.coordinator.data:
+            attrs["last_error"] = self.coordinator.data["error"]
         return attrs
 
 
@@ -106,23 +117,26 @@ class HermesConnectionQualitySensor(CoordinatorEntity):
     def is_on(self) -> Optional[bool]:
         """Return True if connection quality is Good.
 
-        Degraded if failure rate > 20% over last 10 polls.
+        Degraded if failure rate > 20% over the tracked polls.
         """
         total = self._failure_count + self._success_count
-        if total < 3:
-            return None  # Not enough data
+        if total == 0:
+            return None  # Not enough data yet
 
         failure_rate = self._failure_count / total
         return failure_rate < 0.2
 
-    def update_success(self) -> None:
-        """Record a successful poll."""
-        self._success_count += 1
-        self._trim_counts()
+    def _handle_coordinator_update(self) -> None:
+        """Track poll success/failure via the coordinator's event hook.
 
-    def update_failure(self) -> None:
-        """Record a failed poll."""
-        self._failure_count += 1
+        DataUpdateCoordinator tracks success in last_update_success; we
+        call that property to decide which counter to bump. This replaces
+        the previously-unused update_success() / update_failure() methods.
+        """
+        if getattr(self.coordinator, "last_update_success", True):
+            self._success_count += 1
+        else:
+            self._failure_count += 1
         self._trim_counts()
 
     def _trim_counts(self) -> None:
