@@ -245,8 +245,7 @@ class HermesRestartButton(ButtonEntity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> bool:
     """Set up button entities for a config entry."""
     entry_data = hass.data[DOMAIN].get(entry.entry_id, {})
@@ -263,12 +262,7 @@ async def async_setup_entry(
     # Only add restart button if SSH host is configured
     if entry.data.get("ssh_host"):
         buttons.append(HermesRestartButton(hass, entry))
-
-    @property
-    def async_add_buttons():
-        hass.helpers.entity.async_add_entities(buttons)
-
-    hass.async_add_job(async_add_buttons)
+    async_add_entities(buttons)
     return True
 
 

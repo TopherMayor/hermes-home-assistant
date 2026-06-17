@@ -145,12 +145,9 @@ class HermesConnectionQualitySensor(CoordinatorEntity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> bool:
     """Set up binary sensor entities for a config entry."""
-    from . import HermesApiClient
-
     gateway_url = entry.data.get("gateway_url", "http://localhost:8642")
     api_key = entry.data.get("api_key", "")
 
@@ -168,12 +165,7 @@ async def async_setup_entry(
     quality_sensor = HermesConnectionQualitySensor(
         hass, entry, coordinator, gateway_url
     )
-
-    @property
-    def async_add_binary_sensors():
-        hass.helpers.entity.async_add_entities([online_sensor, quality_sensor])
-
-    hass.async_add_job(async_add_binary_sensors)
+    async_add_entities([online_sensor, quality_sensor])
     return True
 
 

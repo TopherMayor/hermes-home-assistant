@@ -255,8 +255,7 @@ class HermesGatewayEventEntity(Entity):
 
 
 async def async_setup_entry(
-    hass: HomeAssistant,
-    entry: ConfigEntry,
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities
 ) -> bool:
     """Set up event platform for a config entry."""
     gateway_url = entry.data.get("gateway_url", "http://localhost:8642")
@@ -270,12 +269,7 @@ async def async_setup_entry(
     }
 
     # Register the gateway event entity
-    @callback
-    def async_add_gateway_event_entity():
-        hass.helpers.entity.async_add_entities([gateway_entity])
-
-    # Defer to platform setup complete
-    hass.async_add_job(async_add_gateway_event_entity)
+    async_add_entities([gateway_entity])
     return True
 
 

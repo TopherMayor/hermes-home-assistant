@@ -20,7 +20,7 @@ _LOGGER = logging.getLogger(__name__)
 # Sensor configuration: (key, name, device_class, unit, icon, entity_category, state_class)
 SENSORS = [
     ("model", "Hermes Model", SensorDeviceClass.ENUM, None, "mdi:robot", EntityCategory.DIAGNOSTIC, None),
-    ("context_pct", "Context Usage", SensorDeviceClass.PERCENTAGE, "%", "mdi:memory", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
+    ("context_pct", "Context Usage", SensorDeviceClass.HUMIDITY, "%", "mdi:memory", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
     ("context_limit", "Context Limit", SensorDeviceClass.DATA_SIZE, "tokens", "mdi:database", EntityCategory.DIAGNOSTIC, None),
     ("uptime_seconds", "Gateway Uptime", SensorDeviceClass.DURATION, "s", "mdi:clock-outline", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
     ("active_threads", "Active Threads", None, "threads", "mdi:account-multiple", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
