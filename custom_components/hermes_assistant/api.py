@@ -142,6 +142,17 @@ class HermesApiClient:
         result = await self._request("GET", "/health/detailed")
         return result or {}
 
+    async def async_get_capabilities(self) -> Dict[str, Any]:
+        """Get gateway capabilities (model, features, runtime, etc.).
+
+        Returns an empty dict on connection/auth errors.
+        """
+        try:
+            result = await self._request("GET", "/v1/capabilities")
+            return result or {}
+        except (HermesConnectionError, HermesAuthError, HermesApiError):
+            return {}
+
     async def async_get_status(self) -> Dict[str, Any]:
         """Get current gateway status (used by sensor entity)."""
         try:

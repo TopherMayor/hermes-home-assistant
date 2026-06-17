@@ -25,7 +25,7 @@ SENSORS = [
     ("uptime_seconds", "Gateway Uptime", SensorDeviceClass.DURATION, "s", "mdi:clock-outline", EntityCategory.DIAGNOSTIC, SensorStateClass.TOTAL_INCREASING),
     ("active_threads", "Active Threads", None, "threads", "mdi:account-multiple", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
     ("rss_mb", "Memory Usage", SensorDeviceClass.DATA_SIZE, "MB", "mdi:memory", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),
-    ("error_count", "Error Count", SensorDeviceClass.ENUM, None, "mdi:alert-circle", EntityCategory.DIAGNOSTIC, None),  # severity enum; do not use TOTAL_INCREASING here
+    ("error_count", "Error Count", None, "errors", "mdi:alert-circle", EntityCategory.DIAGNOSTIC, SensorStateClass.MEASUREMENT),  # count of platforms not in "connected" state
     ("version", "Hermes Version", SensorDeviceClass.ENUM, None, "mdi:information", EntityCategory.DIAGNOSTIC, None),
     ("provider", "LLM Provider", SensorDeviceClass.ENUM, None, "mdi:cloud", EntityCategory.DIAGNOSTIC, None),
 ]
@@ -138,8 +138,6 @@ class HermesSensorEntity(SensorEntity):
             return ["hermes-agent", "unknown"]
         if self._key == "online":
             return ["online", "offline", "auth_failed"]
-        if self._key == "error_count":
-            return ["none", "low", "medium", "high"]
         if self._key == "version":
             data = self.coordinator.data or {}
             current = data.get("version") if isinstance(data, dict) else None

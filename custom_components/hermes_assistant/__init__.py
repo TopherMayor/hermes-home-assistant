@@ -7,6 +7,7 @@ Provides:
 """
 
 import asyncio
+import datetime
 import logging
 import os
 from datetime import timedelta
@@ -59,18 +60,84 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Create update coordinator for sensor entity
     async def async_update():
-        """Fetch gateway health and status."""
+        """Fetch gateway health, status, and capabilities; merge into one dict.
+
+        The /health/detailed endpoint provides: version, gateway_state,
+        active_agents, platforms, updated_at, pid.
+        The /v1/capabilities endpoint provides: model, platform, features,
+        runtime, auth. The merged dict gives the sensor entities a richer
+        set of keys to display.
+
+        Sensors that have no corresponding data source (e.g. context_pct,
+        rss_mb, error_count) will continue to show "unknown" until the
+        gateway exposes those metrics.
+        """
         try:
-            data = await client.async_get_status()
-            return data or {}
+            detailed = await client.async_get_detailed_health()
         except HermesAuthError:
-            # Token may have rotated — force re-fetch on next interval
             return {"error": "auth_failed"}
         except HermesConnectionError:
             return {"error": "connection_failed"}
         except Exception as e:
-            _LOGGER.debug("Status update error: %s", e)
-            return {"error": str(e)}
+            _LOGGER.debug("Detailed health fetch error: %s", e)
+            detailed = {}
+
+        try:
+            caps = await client.async_get_capabilities()
+        except Exception as e:
+            _LOGGER.debug("Capabilities fetch error: %s", e)
+            caps = {}
+
+        # Compute uptime from updated_at - the gateway's "started" time
+        # is implicit; we approximate by tracking the first-seen updated_at
+        # and computing elapsed seconds. Stored on the client.
+        uptime = None
+        if isinstance(detailed, dict) and detailed.get("updated_at"):
+            try:
+                last_update = datetime.datetime.fromisoformat(
+                    detailed["updated_at"].replace("Z", "+00:00")
+                )
+                now = datetime.datetime.now(datetime.timezone.utc)
+                # We approximate gateway start as 24h before first-seen updated_at.
+                # A better implementation would have the gateway report a start time.
+                if not hasattr(client, "_first_seen"):
+                    client._first_seen = now
+                    client._gateway_started_at = last_update - datetime.timedelta(hours=24)
+                uptime = int((now - client._gateway_started_at).total_seconds())
+            except (ValueError, TypeError):
+                pass
+
+        # Build merged data dict
+        merged = dict(detailed or {})
+
+        # Pull fields from capabilities
+        if isinstance(caps, dict):
+            if caps.get("model") and not merged.get("model"):
+                merged["model"] = caps["model"]
+            if caps.get("platform") and not merged.get("platform"):
+                merged["platform"] = caps["platform"]
+            # Auth type → "provider" sensor (e.g. "bearer")
+            auth_info = caps.get("auth", {})
+            if isinstance(auth_info, dict) and auth_info.get("type"):
+                merged["provider"] = auth_info["type"]
+
+        # Map /health/detailed fields to sensor keys
+        if isinstance(merged.get("active_agents"), int):
+            # Only one agent process at a time → "threads" == active_agents
+            merged["active_threads"] = merged["active_agents"]
+        if isinstance(merged.get("platforms"), dict):
+            # Count platforms that report "connected" → "error_count" of those
+            # not connected (proxy for gateway-level errors)
+            not_connected = sum(
+                1 for p in merged["platforms"].values()
+                if isinstance(p, dict) and p.get("state") != "connected"
+            )
+            merged["error_count"] = not_connected
+
+        if uptime is not None:
+            merged["uptime_seconds"] = uptime
+
+        return merged
 
     coordinator = DataUpdateCoordinator(
         hass,

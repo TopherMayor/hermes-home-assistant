@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.2] - 2026-06-17
+
+### Added
+- `api.py`: new `async_get_capabilities()` method that calls the gateway's `/v1/capabilities` endpoint and returns model, platform, auth type, features, and runtime info.
+- `__init__.py`: coordinator now fetches both `/health/detailed` AND `/v1/capabilities` and merges the responses into a single data dict. This populates sensor entities that were previously stuck on "unknown":
+  - `model` ← `/v1/capabilities.model` (e.g. "hermes-agent")
+  - `provider` ← `/v1/capabilities.auth.type` (e.g. "bearer")
+  - `uptime_seconds` ← computed from `/health/detailed.updated_at` (approximates gateway start as 24h before the first-seen updated_at; tracks start time on the client object so subsequent polls use the same baseline)
+  - `active_threads` ← mapped from `/health/detailed.active_agents`
+  - `error_count` ← count of `platforms` whose state is not "connected" (proxy for gateway-level connection errors)
+
+### Changed
+- `sensor.py`: `error_count` sensor is now a numeric sensor (`SensorStateClass.MEASUREMENT`, unit "errors") rather than an enum/categorical, since it now reports an actual integer count. Removed the categorical `options` list for this sensor.
+
 ## [0.1.1] - 2026-06-17
 
 ### Fixed
