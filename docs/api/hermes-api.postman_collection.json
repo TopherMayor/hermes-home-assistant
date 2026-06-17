@@ -1,0 +1,207 @@
+{
+  "info": {
+    "name": "Hermes Agent API",
+    "description": "API collection for the Hermes Agent gateway. Import into Postman and set a variable `gateway_url` and `api_key`.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "gateway_url",
+      "value": "http://localhost:8642"
+    },
+    {
+      "key": "api_key",
+      "value": "your-api-key-here"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Health",
+      "item": [
+        {
+          "name": "GET /health",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": ["pm.test('Status 200', function() { pm.response.to.have.status(200); });", "pm.test('Has status ok', function() { var json = pm.response.json(); pm.expect(json.status).to.eql('ok'); });"]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/health",
+              "host": ["{{gateway_url}}"],
+              "path": ["health"]
+            }
+          }
+        },
+        {
+          "name": "GET /health/detailed",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/health/detailed",
+              "host": ["{{gateway_url}}"],
+              "path": ["health", "detailed"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Runs",
+      "item": [
+        {
+          "name": "POST /v1/runs (background)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"messages\": [\n    { \"role\": \"system\", \"content\": \"You are a helpful assistant.\" },\n    { \"role\": \"user\", \"content\": \"Hello, what is the weather?\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/v1/runs",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "runs"]
+            }
+          }
+        },
+        {
+          "name": "GET /v1/runs/{run_id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/v1/runs/:run_id",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "runs", ":run_id"]
+            },
+            "variable": [
+              { "key": "run_id", "value": "REPLACE_WITH_RUN_ID" }
+            ]
+          }
+        },
+        {
+          "name": "POST /v1/responses (sync chat)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"default\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"Hello Hermes\" }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/v1/responses",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "responses"]
+            }
+          }
+        },
+        {
+          "name": "POST /v1/responses/stream (streaming SSE)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"model\": \"default\",\n  \"messages\": [\n    { \"role\": \"user\", \"content\": \"Write a haiku about robots\" }\n  ],\n  \"stream\": true\n}"
+            },
+            "url": {
+              "raw": "{{gateway_url}}/v1/responses/stream",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "responses", "stream"]
+            }
+          }
+        },
+        {
+          "name": "POST /v1/runs/{run_id}/cancel",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/v1/runs/:run_id/cancel",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "runs", ":run_id", "cancel"]
+            },
+            "variable": [
+              { "key": "run_id", "value": "REPLACE_WITH_RUN_ID" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Conversations",
+      "item": [
+        {
+          "name": "GET /v1/conversations/{id}/messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/v1/conversations/:conversation_id/messages",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "conversations", ":conversation_id", "messages"]
+            },
+            "variable": [
+              { "key": "conversation_id", "value": "REPLACE_WITH_CONV_ID" }
+            ]
+          }
+        },
+        {
+          "name": "DELETE /v1/conversations/{id}",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/v1/conversations/:conversation_id",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "conversations", ":conversation_id"]
+            },
+            "variable": [
+              { "key": "conversation_id", "value": "REPLACE_WITH_CONV_ID" }
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Capabilities",
+      "item": [
+        {
+          "name": "GET /v1/capabilities",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{gateway_url}}/v1/capabilities",
+              "host": ["{{gateway_url}}"],
+              "path": ["v1", "capabilities"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,71 @@
+name: Feature Request
+
+description: Suggest a new feature or improvement.
+
+labels: ["enhancement", "feature-request"]
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        ## Feature Request
+        Have an idea for a new feature? Fill out the template below.
+
+  - type: input
+    id: summary
+    attributes:
+      label: Feature Summary
+      description: A short one-line description of the feature.
+      placeholder: "e.g. Add support for streaming voice responses"
+    validations:
+      required: true
+
+  - type: textarea
+    id: use_case
+    attributes:
+      label: Use Case
+      description: "Who would use this feature and why? What's the problem it solves?"
+      placeholder: |
+        As a [type of user], I want [some goal] so that [benefit].
+        ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: proposed_solution
+    attributes:
+      label: Proposed Solution
+      description: How should it work? Describe the implementation approach if you have one.
+      placeholder: |
+        The integration should:
+        1. ...
+        2. ...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives Considered
+      description: Any alternative approaches you've considered?
+      placeholder: "I considered X but decided against it because..."
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: component
+    attributes:
+      label: Which components would this affect?
+      options:
+        - label: Assist / Conversation Agent
+          value: conversation
+        - label: Lovelace Chat Card
+          value: card
+        - label: Sensor Entities
+          value: sensors
+        - label: Automation Services
+          value: services
+        - label: Config Flow
+          value: config
+        - label: Other
+          value: other
