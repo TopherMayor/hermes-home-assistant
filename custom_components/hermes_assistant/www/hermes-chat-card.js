@@ -88,14 +88,14 @@ class HermesChatCard extends HTMLElement {
   }
 
   setConfig(config) {
-    // Validate config
+    // Validate config — use a new object to avoid mutating the frozen
+    // config object that HA passes in (HA 2026.6+ freezes config objects,
+    // and trying to add properties throws TypeError).
     const schema = this._configSchema();
+    this._config = {};
     for (const [key, def] of Object.entries(schema)) {
-      if (config[key] === undefined) {
-        config[key] = def.default;
-      }
+      this._config[key] = config[key] !== undefined ? config[key] : def.default;
     }
-    this._config = config;
   }
 
   getConfigEl() {

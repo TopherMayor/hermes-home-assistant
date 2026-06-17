@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.5] - 2026-06-17
+
+### Fixed
+- `www/hermes-chat-card.js`: `setConfig()` was mutating the config object
+  HA passes in, which is frozen in HA 2026.6+. Trying to add a default
+  property (`prominent`, etc.) threw `TypeError: cannot add property
+  prominent, object is not extensible`. The fix is to build a fresh
+  object instead of mutating the input.
+
 ## [0.1.4] - 2026-06-17
 
 ### Added
