@@ -195,6 +195,14 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
                     + (latest.get("reasoning_tokens") or 0)
                 )
 
+            # Set model from the most recent session (actual LLM being used,
+            # e.g. "MiniMax-M3"). /v1/capabilities.model returns the platform
+            # name ("hermes-agent") which is less useful for the dashboard.
+            if sorted_sessions:
+                latest_model = sorted_sessions[0].get("model")
+                if latest_model:
+                    merged["model"] = latest_model
+
             merged["rss_mb"] = active_sessions
             merged["context_limit"] = tokens_today
             merged["context_pct"] = tokens_last

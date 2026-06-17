@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.6] - 2026-06-17
+
+### Fixed
+- `__init__.py`: the `model` sensor now shows the actual LLM in use
+  (e.g. "MiniMax-M3") from the most recent session in `/api/sessions`,
+  instead of the platform name "hermes-agent" returned by `/v1/capabilities`.
+
 ## [0.1.5] - 2026-06-17
 
 ### Fixed
