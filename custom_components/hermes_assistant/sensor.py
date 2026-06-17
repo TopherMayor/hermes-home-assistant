@@ -140,7 +140,12 @@ class HermesSensorEntity(SensorEntity):
         "unknown" fallback so HA's enum validation passes either way.
         """
         if self._key == "model":
-            return ["hermes-agent", "unknown"]
+            # Dynamic: actual LLM model from /api/sessions
+            # (e.g. "MiniMax-M3", "claude-3-opus") + "unknown" fallback.
+            data = self.coordinator.data or {}
+            current = data.get("model") if isinstance(data, dict) else None
+            opts = [v for v in (current, "unknown") if v]
+            return opts or ["unknown"]
         if self._key == "online":
             return ["online", "offline", "auth_failed"]
         if self._key == "version":
