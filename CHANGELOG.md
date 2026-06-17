@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.9] - 2026-06-17
+
+### Changed
+- `www/hermes-chat-card.js`: custom element renamed from `hermes-chat-card`
+  to `hermes-chat-card-v3`. Dashboard config must also be updated to
+  `type: custom:hermes-chat-card-v3`. This forces a clean re-registration
+  when users have stale card classes cached in their browser.
+
 ## [0.1.8] - 2026-06-17
 
 ### Fixed
